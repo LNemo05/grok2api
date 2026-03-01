@@ -1,7 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import type { Env } from "./env";
 import { getSettings } from "./settings";
-import type { SettingsBundle } from "./settings";
 import { dbFirst } from "./db";
 import { validateApiKey } from "./repo/apiKeys";
 import { verifyAdminSession } from "./repo/adminSessions";
@@ -28,13 +27,12 @@ function authError(message: string, code: string): Record<string, unknown> {
   };
 }
 
-export const requireApiAuth: MiddlewareHandler<{ Bindings: Env; Variables: { apiAuth: ApiAuthInfo; settingsBundle: SettingsBundle } }> = async (
+export const requireApiAuth: MiddlewareHandler<{ Bindings: Env; Variables: { apiAuth: ApiAuthInfo } }> = async (
   c,
   next,
 ) => {
   const token = bearerToken(c.req.header("Authorization") ?? null);
   const settings = await getSettings(c.env);
-  c.set("settingsBundle", settings);
 
   if (!token) {
     const globalKey = (settings.grok.api_key ?? "").trim();
