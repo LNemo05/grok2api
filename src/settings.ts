@@ -312,3 +312,4 @@ export async function saveSettings(
     ["register", JSON.stringify(nextRegister), now],
   );
 }
+
