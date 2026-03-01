@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import type { Env } from "../env";
 import { requireApiAuth } from "../auth";
 import { getSettings, normalizeCfCookie } from "../settings";
-import type { SettingsBundle } from "../settings";
 import { isValidModel, MODEL_CONFIG } from "../grok/models";
 import { extractContent, buildConversationPayload, sendConversationRequest } from "../grok/conversation";
 import { uploadImage } from "../grok/upload";
@@ -81,7 +80,7 @@ async function runTasksSettledWithLimit<T, R>(
   return results;
 }
 
-export const openAiRoutes = new Hono<{ Bindings: Env; Variables: { apiAuth: ApiAuthInfo; settingsBundle: SettingsBundle } }>();
+export const openAiRoutes = new Hono<{ Bindings: Env; Variables: { apiAuth: ApiAuthInfo } }>();
 
 openAiRoutes.use(
   "/*",
@@ -1183,7 +1182,7 @@ openAiRoutes.get("/models/:modelId", async (c) => {
 });
 
 openAiRoutes.get("/images/method", async (c) => {
-  const settingsBundle = c.get("settingsBundle");
+  const settingsBundle = await getSettings(c.env);
   return c.json({ image_generation_method: imageGenerationMethod(settingsBundle) });
 });
 
@@ -1214,7 +1213,7 @@ openAiRoutes.post("/chat/completions", async (c) => {
     if (!isValidModel(requestedModel))
       return c.json(openAiError(`Model '${requestedModel}' not supported`, "model_not_supported"), 400);
 
-    const settingsBundle = c.get("settingsBundle");
+    const settingsBundle = await getSettings(c.env);
     const cfg = MODEL_CONFIG[requestedModel]!;
 
     const retryCodes = Array.isArray(settingsBundle.grok.retry_status_codes)
@@ -1427,7 +1426,7 @@ openAiRoutes.post("/images/generations", async (c) => {
       return c.json(openAiError(invalidStreamNMessage(), "invalid_stream_n"), 400);
     }
 
-    const settingsBundle = c.get("settingsBundle");
+    const settingsBundle = await getSettings(c.env);
     const imageMethod = imageGenerationMethod(settingsBundle);
     const parsedResponseFormat = resolveImageResponseFormatByMethodOrError(
       body.response_format,
@@ -1693,7 +1692,7 @@ openAiRoutes.post("/images/edits", async (c) => {
       return c.json(openAiError("Too many images. Maximum is 16.", "invalid_image_count"), 400);
     }
 
-    const settingsBundle = c.get("settingsBundle");
+    const settingsBundle = await getSettings(c.env);
     const imageMethod = imageGenerationMethod(settingsBundle);
     const parsedResponseFormat = resolveImageResponseFormatByMethodOrError(
       form.get("response_format"),
